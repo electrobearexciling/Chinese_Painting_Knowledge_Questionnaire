@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chinese Painting Knowledge Questionnaire</title>
+
+    <script src="jspsych/jspsych.js"></script>
+    <script src="jspsych/plugin-html-button-response.js"></script>
+    <script src="jspsych/plugin-preload.js"></script>
+    <script src="jspsych/plugin-survey.js"></script>
+    <script src="modules/chinese_painting_knowledge.js"></script>
+
+    <link href="jspsych/jspsych.css" rel="stylesheet" type="text/css">
+    <link href="jspsych/survey.css" rel="stylesheet" type="text/css">
+
+    <style>
+        .sd-progress,
+        .sd-body__progress--top {
+            display: none !important;
+        }
+
+        #subject-input-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+        }
+
+        #subject-input-card {
+            width: min(90vw, 520px);
+            padding: 36px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        #subject-input-card h1 {
+            margin: 0 0 14px;
+            font-size: 28px;
+            line-height: 1.25;
+        }
+
+        #subject-input-card p {
+            margin: 0 0 24px;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        #subject_id_input {
+            width: 100%;
+            padding: 10px 12px;
+            box-sizing: border-box;
+            border: 1px solid #b8b8b8;
+            border-radius: 4px;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        #subject-input-card button,
+        #download-again {
+            margin-top: 18px;
+            padding: 10px 28px;
+            border: 0;
+            border-radius: 4px;
+            background: #2f6fab;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #download-again {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="subject-input-overlay">
+        <div id="subject-input-card">
+            <h1>Chinese Painting Knowledge Questionnaire</h1>
+            <p>Please enter the participant ID before starting Parts B and C.</p>
+            <input id="subject_id_input" type="text" autocomplete="off" placeholder="Participant ID">
+            <br>
+            <button id="start-questionnaire" type="button">Start questionnaire</button>
+        </div>
+    </div>
+
+    <script>
+        const questionnaireStartedAt = new Date();
+        let subjectId = "";
+        let questionnaireFinished = false;
+
+        const jsPsych = initJsPsych({
+            show_progress_bar: true
+        });
+
+        function toBeijingISOString(date) {
+            const beijingTime = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+            return beijingTime.toISOString().replace("Z", "+08:00");
+        }
+
+        function getResponse(testPart) {
+            const trials = jsPsych.data.get().values();
+            for (let index = 0; index < trials.length; index++) {
+                if (trials[index].test_part === testPart) {
+                    return trials[index].response || {};
+                }
+            }
+            return {};
+        }
+
+        function csvEscape(value) {
+            const text = value === null || value === undefined ? "" : String(value);
+            return '"' + text.replace(/"/g, '""') + '"';
+        }
+
+        function safeFileStem(value) {
+            const stem = String(value || "")
+                .trim()
+                .replace(/[\\/:*?"<>|]+/g, "_")
+                .replace(/\s+/g, "_");
+            return stem || "participant";
+        }
+
+        const partBAnswerKey = {
+            1: "Boyi and Shuqi",
+            2: "Orchid Pavilion Gathering",
+            3: "jiehua (ruled-line painting)",
+            4: "mogu (boneless painting)",
+            5: "fuhekishun (axe-cut texture strokes)",
+            6: "Many children and abundant blessings; family prosperity"
+        };
+
+        const partCAnswerKey = {
+            1: {
+                artistOrWork: [
+                    "Zhou Fang",
+                    "Zhou Jingxuan",
+                    "Zhou Zhonglang",
+                    "Court Ladies Adorning Their Hair with Flowers"
+                ],
+                style: [
+                    "Tang court-lady painting",
+                    "qiluo (silk-robed beauty) figure painting",
+                    "qiluo figure painting",
+                    "silk-robed beauty figure painting",
+                    "gongbi zhongcai"
+                ]
+            },
+            2: {
+                artistOrWork: [
+                    "Wang Ximeng",
+                    "A Thousand Li of Rivers and Mountains"
+                ],
+                style: [
+                    "Song academic blue-and-green landscape",
+                    "da qinglu (heavy blue-and-green coloring)",
+                    "da qinglu",
+                    "heavy blue-and-green coloring",
+                    "gongbi zhongcai"
+                ]
+            },
+            3: {
+                artistOrWork: [
+                    "Zhang Zeduan",
+                    "Along the River During the Qingming Festival"
+                ],
+                style: [
+                    "genre painting",
+                    "urban genre handscroll",
+                    "jiehua (ruled-line painting)",
+                    "jiehua",
+                    "ruled-line painting"
+                ]
+            },
+            4: {
+                artistOrWork: [
+                    "Xu Beihong",
+                    "Galloping Horse"
+                ],
+                style: [
+                    "modern realist ink painting",
+                    "Sino-Western synthesis",
+                    "xieyi animal painting"
+                ]
+            },
+            5: {
+                artistOrWork: [
+                    "Huang Gongwang",
+                    "Da Chi",
+                    "Da Chi Daoren",
+                    "Dwelling in the Fuchun Mountains"
+                ],
+                style: [
+                    "Yuan literati landscape",
+                    "Southern School landscape",
+                    "light-ochre (qianjiang) landscape",
+                    "light-ochre landscape",
+                    "qianjiang landscape"
+                ]
+            },
+            6: {
+                artistOrWork: [
+                    "Gu Hongzhong",
+                    "The Night Revels of Han Xizai"
+                ],
+                style: [
+                    "Five Dynasties court figure painting",
+                    "gongbi zhongcai",
+                    "narrative handscroll"
+                ]
+            },
+            7: {
+                artistOrWork: [
+                    "Qiu Ying",
+                    "Qiu Shifu",
+                    "Spring Morning in the Han Palace"
+                ],
+                style: [
+                    "Wu School",
+                    "gongbi zhongcai court-lady painting",
+                    "combined blue-and-green landscape and figures"
+                ]
+            },
+            8: {
+                artistOrWork: [
+                    "Yan Liben",
+                    "Emperor Taizong Receiving the Tibetan Envoy"
+                ],
+                style: [
+                    "Tang dynasty figure painting",
+                    "gongbi zhongcai (meticulous heavy-color painting)",
+                    "gongbi zhongcai",
+                    "meticulous heavy-color painting",
+                    "historical documentary handscroll"
+                ]
+            },
+            9: {
+                artistOrWork: [
+                    "Zhao Ji",
+                    "Emperor Huizong",
+                    "Auspicious Cranes"
+                ],
+                style: [
+                    "Northern Song academic flower-and-bird painting",
+                    "gongbi (meticulous realist painting)",
+                    "gongbi",
+                    "meticulous realist painting"
+                ]
+            },
+            10: {
+                artistOrWork: [
+                    "Wu Guanzhong",
+                    "Withered Lotus and New Willow"
+                ],
+                style: [
+                    "modern Chinese oil painting"
+                ]
+            }
+        };
+
+        function normalizeAnswer(value) {
+            return String(value || "")
+                .normalize("NFKD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase()
+                .replace(/&/g, " and ")
+                .replace(/[^a-z0-9]+/g, " ")
+                .trim()
+                .replace(/\s+/g, " ");
+        }
+
+        function matchesAcceptedAnswer(givenAnswer, acceptedAnswers) {
+            const normalizedGiven = normalizeAnswer(givenAnswer);
+            if (!normalizedGiven) {
+                return false;
+            }
+
+            const paddedGiven = " " + normalizedGiven + " ";
+            return acceptedAnswers.some(function(acceptedAnswer) {
+                let normalizedAccepted = normalizeAnswer(acceptedAnswer);
+                normalizedAccepted = normalizedAccepted.replace(/^(the|a|an) /, "");
+                return normalizedAccepted &&
+                    paddedGiven.includes(" " + normalizedAccepted + " ");
+            });
+        }
+
+        function calculateScores(partB, partC) {
+            let partBScore = 0;
+            let artistScore = 0;
+            let styleScore = 0;
+
+            for (let item = 1; item <= 6; item++) {
+                if (matchesAcceptedAnswer(
+                    partB["B" + item],
+                    [partBAnswerKey[item]]
+                )) {
+                    partBScore++;
+                }
+            }
+
+            for (let item = 1; item <= 10; item++) {
+                const key = partCAnswerKey[item];
+                if (matchesAcceptedAnswer(
+                    partC["C" + item + "_1"],
+                    key.artistOrWork
+                )) {
+                    artistScore++;
+                }
+                if (matchesAcceptedAnswer(
+                    partC["C" + item + "_2"],
+                    key.style
+                )) {
+                    styleScore++;
+                }
+            }
+
+            return {
+                partB: partBScore,
+                artist: artistScore,
+                style: styleScore,
+                total: partBScore + artistScore + styleScore
+            };
+        }
+
+        function buildResponseCsv() {
+            const partB = getResponse("chinese-painting-part-b");
+            const partC = getResponse("chinese-painting-part-c");
+            const scores = calculateScores(partB, partC);
+            const completedAt = new Date();
+            const durationSeconds = Math.round((completedAt - questionnaireStartedAt) / 1000);
+
+            const headers = [
+                "subject_id",
+                "started_at",
+                "completed_at",
+                "duration_seconds"
+            ];
+            const values = [
+                subjectId,
+                toBeijingISOString(questionnaireStartedAt),
+                toBeijingISOString(completedAt),
+                durationSeconds
+            ];
+
+            for (let item = 1; item <= 6; item++) {
+                headers.push("B" + item);
+                values.push(partB["B" + item] || "");
+            }
+
+            for (let item = 1; item <= 10; item++) {
+                headers.push("C" + item + "_familiarity");
+                headers.push("C" + item + "_artist");
+                headers.push("C" + item + "_style");
+
+                const familiarity = partC["C" + item + "_0"];
+                values.push(
+                    familiarity === 1 || familiarity === "1"
+                        ? "Yes"
+                        : familiarity === 0 || familiarity === "0"
+                            ? "No"
+                            : ""
+                );
+                values.push(partC["C" + item + "_1"] || "");
+                values.push(partC["C" + item + "_2"] || "");
+            }
+
+            headers.push("total_score");
+            values.push(scores.total);
+
+            return [headers, values]
+                .map(function(row) {
+                    return row.map(csvEscape).join(",");
+                })
+                .join("\r\n");
+        }
+
+        function downloadResponses() {
+            const csv = "\uFEFF" + buildResponseCsv();
+            const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+
+            link.href = url;
+            link.download = safeFileStem(subjectId) + "_chinese_painting_" + timestamp + ".csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(function() {
+                URL.revokeObjectURL(url);
+            }, 1000);
+        }
+
+        function buildCompletionTrial() {
+            return {
+                type: jsPsychHtmlButtonResponse,
+                stimulus: `
+                    <div style="max-width:760px;margin:0 auto;text-align:center;">
+                        <h2>Thank you for completing the questionnaire.</h2>
+                        <p>Your response file has been requested for download.</p>
+                        <p>If the download did not start, use the button below.</p>
+                        <button id="download-again" type="button">Download response file</button>
+                    </div>
+                `,
+                choices: ["Finish"],
+                data: {
+                    test_part: "completion"
+                },
+                on_load: function() {
+                    downloadResponses();
+                    const button = document.getElementById("download-again");
+                    if (button) {
+                        button.addEventListener("click", downloadResponses);
+                    }
+                },
+                on_finish: function() {
+                    questionnaireFinished = true;
+                }
+            };
+        }
+
+        function startQuestionnaire() {
+            const input = document.getElementById("subject_id_input");
+            const value = input ? input.value.trim() : "";
+
+            if (!value) {
+                window.alert("Please enter a participant ID.");
+                return;
+            }
+
+            subjectId = value;
+            document.getElementById("subject-input-overlay").style.display = "none";
+
+            jsPsych.data.addProperties({
+                subject_id: subjectId,
+                start_iso: toBeijingISOString(questionnaireStartedAt)
+            });
+
+            const preloadTrial = {
+                type: jsPsychPreload,
+                message: "Loading questionnaire images. Please wait.",
+                continue_after_error: false,
+                images: ChinesePaintingKnowledge.getPreloadImages()
+            };
+
+            const trials = [preloadTrial]
+                .concat(ChinesePaintingKnowledge.getTrials())
+                .concat([buildCompletionTrial()]);
+
+            jsPsych.run(trials);
+        }
+
+        document.getElementById("start-questionnaire").addEventListener("click", startQuestionnaire);
+        document.getElementById("subject_id_input").addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                startQuestionnaire();
+            }
+        });
+
+        window.addEventListener("beforeunload", function(event) {
+            if (!questionnaireFinished && subjectId) {
+                event.preventDefault();
+                event.returnValue = "";
+            }
+        });
+    </script>
+</body>
+</html>
